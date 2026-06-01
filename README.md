@@ -10,17 +10,22 @@ run out of memory or lose accuracy.
 
 Modern networks generate traffic faster than traditional systems can monitor.
 
-- **Hash Map (Exact Tracking)** — Perfect accuracy and fast lookups, but memory grows as **O(N)** with the number of flows, making it difficult to scale.
+- **Hash Map (Exact Tracking)**
 
-- **Count-Min Sketch (Approximate Tracking)** — Uses a fixed amount of memory and remains fast, but can suffer from high estimation errors due to hash collisions.
+  Perfect accuracy and fast lookups, but memory grows as **O(N)** with the number of flows, making it difficult to scale.
 
-- **Elastic Sketch (This Project)** — Maintains a fixed memory footprint of **~152 KB**, achieves **~99% accuracy**, and processes up to **236M packets/sec** by combining exact and approximate flow tracking.
+- **Count-Min Sketch (Approximate Tracking)**
+
+  Uses fixed memory and remains fast, but estimation errors increase because multiple flows share the same counters.
+
+- **Elastic Sketch (This Project)**
+
+  Combines exact and approximate tracking to achieve **~99% accuracy**, process **236M packets/sec**, and maintain a fixed memory footprint of only **~152 KB**.
 ---
 
 ## Architecture
 Two layers work together in a single pipeline:
 
-Two layers work together in a single pipeline.
 
 ### Layer 1 — Heavy Guardian
 
@@ -105,28 +110,33 @@ Elastic_Sketch_Netwrok_Telemetry/
 ### Prerequisites
 - GCC (Linux/Mac built-in · Windows: [MinGW-w64](https://winlibs.com))
 
-### Build & Run
+### 1️⃣ Main Program
+
 ```bash
-# Main program
 gcc -Wall -O2 -std=c99 -o elastic_sketch \
   src/heavy_guardian.c src/count_min_sketch.c \
   src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
-./elastic_sketch
 
-# Benchmark suite
+./elastic_sketch
+```
+
+### 2️⃣ Benchmark Suite
+
+```bash
 gcc -Wall -O2 -std=c99 -o benchmark \
   src/heavy_guardian.c src/count_min_sketch.c \
   src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
+
 ./benchmark
 ```
 
 ### Windows (PowerShell)
+
 ```powershell
 gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
+
 .\elastic_sketch.exe
 ```
-
----
 
 ## 🧠 Key Concepts
 
