@@ -6,44 +6,48 @@ run out of memory or lose accuracy.
 
 ---
 
-## The Problem
+## 🚦 Problem
 
 Modern networks generate traffic faster than traditional systems can monitor.
 
-| Approach | Memory | Accuracy | Speed |
-|---|---|---|---|
-| Hash Map (exact) | O(N) → crashes | Perfect | Fast |
-| Count-Min Sketch(approximate) | Fixed,small | High error | Fast |
-| **Elastic Sketch(this project)** | **Fixed ~152KB** | **~99%** | **236M pkt/s** |
+- **Hash Map (Exact Tracking)** — Perfect accuracy and fast lookups, but memory grows as **O(N)** with the number of flows, making it difficult to scale.
 
+- **Count-Min Sketch (Approximate Tracking)** — Uses a fixed amount of memory and remains fast, but can suffer from high estimation errors due to hash collisions.
+
+- **Elastic Sketch (This Project)** — Maintains a fixed memory footprint of **~152 KB**, achieves **~99% accuracy**, and processes up to **236M packets/sec** by combining exact and approximate flow tracking.
 ---
 
 ## Architecture
 Two layers work together in a single pipeline:
 
-**Layer 1 — Heavy Guardian** (exact tracking)
-```
-Every packet → hashed to a bucket → one of three outcomes:
-   Same flow?        → increment its counter
-   Different flow?  → decrement the reward field
-   Reward hits 0?    → evict weak flow to Layer 2, install new flow
-```
-This is called **Vote-and-Demote**. Frequent flows survive by repeatedly winning votes. Weak flows get pushed out.
+Two layers work together in a single pipeline.
 
-**Layer 2 — Count-Min Sketch** (approximate tracking)
-```
-Evicted flows → hashed 4 ways → 4 counters incremented
-Query         → take the minimum of all 4 counters
-```
-The minimum reduces overestimation from hash collisions.
+### Layer 1 — Heavy Guardian
 
-**Together:** heavy hitters get exact counts, everything else gets a good-enough estimate — all within fixed memory.
+Every packet is hashed into a bucket where one of three actions occurs:
 
+- Same flow → increment its counter
+- Different flow → decrease the reward value
+- Reward reaches zero → evict the weaker flow and install the new one
+
+This mechanism is called **Vote-and-Demote**. Frequently occurring flows continue receiving votes and stay in memory, while less important flows are gradually removed.
+
+### Layer 2 — Count-Min Sketch
+
+Flows removed from Heavy Guardian are forwarded to the Count-Min Sketch.
+
+- Flow is hashed into 4 counter arrays
+- Corresponding counters are incremented
+- Queries return the minimum counter value
+
+Using the minimum counter helps reduce overestimation caused by hash collisions.
+
+**Result:** Important flows receive near-exact tracking while less significant flows are estimated efficiently within a fixed memory budget.
 ---
 
-## Benchmark Results
+## 📊 Benchmark Results
 
-```
+```text
 ====================================
  ELASTIC SKETCH - NETWORK TELEMETRY
 ====================================
@@ -54,10 +58,10 @@ Throughput              : ~236,568,806 pkt/s
 Precision               : 100.0%
 Recall                  : 98.8%
 
-Mean Relative Error     : 22.15%  [ flows seen >= 10 packets]
-  Heavy flows  (> 500)  :  1.21%  
-  Mid flows    (>  50)  : 11.84%  
-  Light flows  (<= 50)  : 27.42%  
+Mean Relative Error     : 22.15%  [ flows seen >= 10 packets ]
+  Heavy flows  (> 500)  :  1.21%
+  Mid flows    (>  50)  : 11.84%
+  Light flows  (<= 50)  : 27.42%
 
 Memory Footprint:
   Heavy Guardian        : 2048 buckets  (~24 KB)
@@ -70,8 +74,8 @@ Memory Footprint:
 
 ## 🛠️ Tech Stack
 
-- **Language** — Pure C (C99), no external libraries
-- **Hashing** — MurmurHash3 finalizer for uniform bucket distribution
+- **Language** — Pure C no external libraries
+- **Hashing** — MurmurHash3 for efficient and uniform bucket distribution
 - **Traffic Simulation** — Zipfian Distribution (α = 1.5) to mimic real internet patterns
 - **Build** — GCC with O2 optimisation
 - **Timing** — POSIX `clock_gettime` at nanosecond precision
@@ -96,7 +100,7 @@ Elastic_Sketch_Netwrok_Telemetry/
 
 ---
 
-## to Build & Run
+##  🚀  Build & Run
 
 ### Prerequisites
 - GCC (Linux/Mac built-in · Windows: [MinGW-w64](https://winlibs.com))
@@ -124,17 +128,13 @@ gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_
 
 ---
 
-## Key Concepts
-**Why not just use a Hash Map?**
-Hash maps give perfect accuracy but need memory proportional to the number of unique flows. At 10 million flows per second, that's gigabytes — not viable on network hardware.
+## 🧠 Key Concepts
 
-**Heavy Guardian** — tracks the most frequent flows with exact counts using a hash-indexed bucket array. Each bucket has a `reward` field; competing flows vote against each other, and the loser gets evicted to the Light Part with its full count preserved.
-
-**Count-Min Sketch** — CMS uses fixed memory but treats all flows equally. Heavy hitters get mixed up with light flows in the same counters, causing high error on the flows you actually care about.
-
-**Zipfian Traffic** — real internet traffic follows a power law: a small number of flows generate the vast majority of packets. This generator replicates that with configurable skew (α = 1.5 by default).
-
-**Why O(1)?** — every packet touches exactly one Heavy bucket and at most 4 CMS counters, regardless of total traffic volume.
+- **Heavy Guardian** — Keeps track of the most active network flows with high accuracy.
+- **Count-Min Sketch** — Estimates frequencies using fixed memory.
+- **Vote-and-Demote** — Important flows stay in memory while weaker flows are gradually replaced.
+- **Zipfian Traffic** — Models real-world traffic where a small number of flows dominate.
+- **O(1) Processing** — Every packet updates a fixed number of counters regardless of traffic volume.
 
 ---
 
