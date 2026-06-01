@@ -6,22 +6,82 @@ run out of memory or lose accuracy.
 
 ---
 
+## 🚀 Features
+
+- Detects heavy-hitter network flows with near-exact accuracy
+- Fixed memory footprint (~152 KB)
+- Processes up to **236M packets/sec**
+- Combines **Heavy Guardian** and **Count-Min Sketch**
+- Simulates realistic traffic using **Zipfian distributions**
+- Pure C implementation with no external dependencies
+
+---
+
 ## 🚦 Problem
 
 Modern networks generate traffic faster than traditional systems can monitor.
 
-- **Hash Map (Exact Tracking)**
+- **Hash Map (Exact Tracking)**→ Accurate, but memory usage grows with the number of network flows.
 
-  Perfect accuracy and fast lookups, but memory grows as **O(N)** with the number of flows, making it difficult to scale.
+- **Count-Min Sketch (Approximate Tracking)**→ Uses fixed memory, but introduces estimation errors due to hash collisions.
 
-- **Count-Min Sketch (Approximate Tracking)**
-
-  Uses fixed memory and remains fast, but estimation errors increase because multiple flows share the same counters.
-
-- **Elastic Sketch (This Project)**
-
-  Combines exact and approximate tracking to achieve **~99% accuracy**, process **236M packets/sec**, and maintain a fixed memory footprint of only **~152 KB**.
+- **Elastic Sketch (This Project)**→ Maintains only **~152 KB memory**, achieves **~99% accuracy**, and processes **236M packets/sec**.
 ---
+## 🛠️ Tech Stack
+
+- **Language** — Pure C no external libraries
+- **Hashing** — MurmurHash3 for efficient and uniform bucket distribution
+- **Traffic Simulation** — Zipfian Distribution (α = 1.5) to mimic real internet patterns
+- **Build** — GCC with O2 optimisation
+- **Timing** — POSIX `clock_gettime` at nanosecond precision
+
+---
+## 📦 Installation
+
+### Prerequisites
+
+- GCC Compiler
+- MinGW-w64 (Windows)
+
+### Clone Repository
+
+```bash
+git clone https://github.com/ircoder3/elastic-sketch-network-telemetry.git
+cd elastic-sketch-network-telemetry
+```
+
+---
+
+## 🚀 Build & Run
+
+### 1️⃣ Main Program
+
+```bash
+gcc -Wall -O2 -std=c99 -o elastic_sketch \
+  src/heavy_guardian.c src/count_min_sketch.c \
+  src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
+
+./elastic_sketch
+```
+
+### 2️⃣ Benchmark Suite
+
+```bash
+gcc -Wall -O2 -std=c99 -o benchmark \
+  src/heavy_guardian.c src/count_min_sketch.c \
+  src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
+
+./benchmark
+```
+
+### Windows (PowerShell)
+
+```powershell
+gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
+
+.\elastic_sketch.exe
+```
+
 
 ## Architecture
 Two layers work together in a single pipeline:
@@ -77,15 +137,7 @@ Memory Footprint:
 
 ---
 
-## 🛠️ Tech Stack
 
-- **Language** — Pure C no external libraries
-- **Hashing** — MurmurHash3 for efficient and uniform bucket distribution
-- **Traffic Simulation** — Zipfian Distribution (α = 1.5) to mimic real internet patterns
-- **Build** — GCC with O2 optimisation
-- **Timing** — POSIX `clock_gettime` at nanosecond precision
-
----
 
 ##  📁 Project Structure
 
@@ -104,39 +156,6 @@ Elastic_Sketch_Netwrok_Telemetry/
 ```
 
 ---
-
-##  🚀  Build & Run
-
-### Prerequisites
-- GCC (Linux/Mac built-in · Windows: [MinGW-w64](https://winlibs.com))
-
-### 1️⃣ Main Program
-
-```bash
-gcc -Wall -O2 -std=c99 -o elastic_sketch \
-  src/heavy_guardian.c src/count_min_sketch.c \
-  src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
-
-./elastic_sketch
-```
-
-### 2️⃣ Benchmark Suite
-
-```bash
-gcc -Wall -O2 -std=c99 -o benchmark \
-  src/heavy_guardian.c src/count_min_sketch.c \
-  src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
-
-./benchmark
-```
-
-### Windows (PowerShell)
-
-```powershell
-gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
-
-.\elastic_sketch.exe
-```
 
 ## 🧠 Key Concepts
 
