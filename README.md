@@ -136,21 +136,17 @@ cd elastic-sketch-network-telemetry
 ### 1️⃣ Main Program
 
 ```bash
-gcc -Wall -O2 -std=c99 -o elastic_sketch \
-  src/heavy_guardian.c src/count_min_sketch.c \
-  src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
+gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
 
-./elastic_sketch
+.\elastic_sketch.exe
 ```
 
 ### 2️⃣ Benchmark Suite
 
 ```bash
-gcc -Wall -O2 -std=c99 -o benchmark \
-  src/heavy_guardian.c src/count_min_sketch.c \
-  src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
+gcc -Wall -O2 -std=c99 -o benchmark.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
 
-./benchmark
+.\benchmark.exe
 ```
 
 ### Windows (PowerShell)
