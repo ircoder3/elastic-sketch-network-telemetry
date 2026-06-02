@@ -104,15 +104,17 @@ Memory Footprint:
 ```text
 elastic-sketch-network-telemetry/
 ├── src/
-│   ├── heavy_guardian.c/h
-│   ├── count_min_sketch.c/h
-│   ├── elastic_sketch.c/h
-│   ├── traffic_gen.c/h
+│   ├── heavy_guardian.c
+│   ├── heavy_guardian.h
+│   ├── count_min_sketch.c
+│   ├── count_min_sketch.h
+│   ├── elastic_sketch.c
+│   ├── elastic_sketch.h
+│   ├── traffic_gen.c
+│   ├── traffic_gen.h
 │   └── main.c
-│
 ├── tests/
 │   └── benchmark.c
-│
 ├── Makefile
 └── README.md
 ```
