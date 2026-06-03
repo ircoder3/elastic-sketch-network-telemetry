@@ -174,4 +174,4 @@ gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_
 
 ## 🔮 Future Work
 
-- **Live Traffic Monitoring** — Integrate packet capture (libpcap) to process real network traffic, transforming Elastic Sketch from a traffic simulator into a practical network telemetry and heavy-flow detection system.
+- **Live Traffic Monitoring** — Integrate packet capture (libpcap) to process real network traffic, transforming Elastic Sketch into a practical network telemetry and heavy-flow detection system.
