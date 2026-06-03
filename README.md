@@ -168,3 +168,10 @@ gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_
 - **Vote-and-Demote** — Important flows stay in memory while weaker flows are gradually replaced.
 - **Zipfian Traffic** — Models real-world traffic where a small number of flows dominate.
 - **O(1) Processing** — Every packet updates a fixed number of counters regardless of traffic volume.
+## 🚧 Pending Enhancement
+
+- **Python Analytics Pipeline** — Export benchmark metrics to JSON/CSV and generate automated visualizations for throughput, memory usage, precision, recall, and heavy-hitter analysis.
+
+## 🔮 Future Work
+
+- **Live Traffic Monitoring** — Integrate packet capture (libpcap) to process real network traffic, transforming Elastic Sketch from a traffic simulator into a practical network telemetry and heavy-flow detection system.
