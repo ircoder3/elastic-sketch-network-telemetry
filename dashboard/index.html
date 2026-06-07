@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elastic Sketch — Network Telemetry</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Orbitron:wght@700;900&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#06020f;
+  --bg2:#0d0520;
+  --bg3:#130830;
+  --bg4:#1a0d3a;
+  --b1:#2a1050;
+  --b2:#3d1a6e;
+
+  --t1:#ede0ff;
+  --t2:#9f7aea;
+  --t3:#5b3a8a;
+
+  --purple:#a855f7;
+  --purple2:#7c3aed;
+  --purple3:#1a0835;
+  --purple-glow:rgba(168,85,247,0.25);
+
+  --green:#22c55e;
+  --green2:#16a34a;
+  --green3:#052e16;
+  --green-glow:rgba(34,197,94,0.2);
+
+  --amber:#f59e0b;
+  --amber3:#1c1000;
+
+  --red:#ef4444;
+  --red3:#1c0000;
+
+  --mono:'JetBrains Mono',monospace;
+  --display:'Orbitron',sans-serif;
+}
+
+body{
+  background:var(--bg);
+  color:var(--t1);
+  font-family:var(--mono);
+  font-size:12px;
+  height:100vh;
+  display:grid;
+  grid-template-rows:56px 1fr;
+  overflow:hidden;
+}
+
+/* Subtle noise/grid texture */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(168,85,247,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(168,85,247,0.03) 1px,transparent 1px);
+  background-size:32px 32px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;
+  border-bottom:1px solid var(--b1);
+  position:relative;z-index:10;
+  background:rgba(6,2,15,0.95);
+  backdrop-filter:blur(10px);
+}
+header::after{
+  content:'';position:absolute;bottom:-1px;left:0;width:140px;height:1px;
+  background:linear-gradient(90deg,var(--purple),transparent);
+  box-shadow:0 0 8px var(--purple);
+}
+.logo{
+  font-family:var(--display);font-size:15px;letter-spacing:1px;
+  color:var(--purple);
+  text-shadow:0 0 12px var(--purple-glow);
+  display:flex;align-items:center;gap:10px;
+}
+.logo-sub{
+  font-family:var(--mono);font-size:10px;font-weight:400;
+  color:var(--t3);letter-spacing:.1em;
+}
+.hdr-right{display:flex;align-items:center;gap:18px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3);}
+.dot.live{
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  animation:blink 1.4s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px var(--green);}
+                 50%{opacity:.3;box-shadow:none;}}
+.hdr-stat{
+  font-size:10px;color:var(--t2);letter-spacing:.05em;
+  display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+}
+.hdr-stat span:last-child{color:var(--green);font-weight:600;}
+
+/* ── BODY LAYOUT ── */
+.body{
+  display:grid;
+  grid-template-columns:220px 1fr;
+  overflow:hidden;
+  position:relative;z-index:1;
+}
+
+/* ── SIDEBAR ── */
+aside{
+  border-right:1px solid var(--b1);
+  padding:14px 12px;
+  display:flex;flex-direction:column;gap:10px;
+  overflow-y:auto;
+  background:rgba(13,5,32,0.7);
+}
+.section{
+  background:linear-gradient(135deg,var(--bg2),var(--bg3));
+  border:1px solid var(--b1);
+  border-radius:8px;padding:12px;
+}
+.section-title{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--purple);margin-bottom:11px;
+  display:flex;gap:5px;align-items:center;
+}
+.section-title::before{content:'▸';opacity:.6;}
+
+/* sliders */
+.sl-row{margin-bottom:9px;}
+.sl-head{display:flex;justify-content:space-between;margin-bottom:3px;}
+.sl-label{font-size:10px;color:var(--t2);}
+.sl-val{font-size:10px;font-weight:600;color:var(--green);}
+input[type=range]{
+  width:100%;height:3px;-webkit-appearance:none;
+  background:var(--b2);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:11px;
+  border-radius:50%;background:var(--purple);cursor:pointer;
+  box-shadow:0 0 5px var(--purple-glow);
+}
+input[type=range]::-webkit-slider-track{background:var(--b2);}
+
+/* buttons */
+.btn{
+  display:block;width:100%;padding:9px;
+  border:1px solid var(--b2);
+  background:transparent;color:var(--t1);
+  font-family:var(--mono);font-size:11px;
+  cursor:pointer;border-radius:6px;
+  letter-spacing:.06em;transition:all .15s;text-align:center;
+}
+.btn:hover{background:var(--purple3);border-color:var(--purple);color:var(--purple);}
+.btn.on{
+  background:var(--purple3);border-color:var(--purple);color:var(--purple);
+  box-shadow:0 0 8px var(--purple-glow);
+}
+.btn.rst:hover{background:var(--red3);border-color:var(--red);color:var(--red);}
+
+/* memory stats */
+.stat-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:4px 0;border-bottom:1px solid rgba(42,16,80,.5);
+}
+.stat-row:last-child{border:none;}
+.stat-k{font-size:10px;color:var(--t3);}
+.stat-v{font-size:10px;font-weight:600;color:var(--green);}
+
+/* ── CONTENT ── */
+.content{
+  display:grid;
+  grid-template-rows:auto 1fr 1fr;
+  overflow:hidden;
+}
+
+/* ── METRIC STRIP ── */
+.metrics{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  padding:10px 14px;border-bottom:1px solid var(--b1);
+}
+.mc{
+  background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);
+  border:1px solid var(--b1);border-radius:8px;
+  padding:10px 12px;position:relative;overflow:hidden;
+  transition:border-color .2s;
+}
+.mc:hover{border-color:var(--purple);}
+.mc::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  border-radius:8px 8px 0 0;
+}
+.mc.p::before{background:linear-gradient(90deg,var(--purple),transparent);}
+.mc.g::before{background:linear-gradient(90deg,var(--green),transparent);}
+.mc.a::before{background:linear-gradient(90deg,var(--amber),transparent);}
+.mc.r::before{background:linear-gradient(90deg,var(--red),transparent);}
+.mc-lbl{
+  font-size:9px;color:var(--t3);letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:3px;
+}
+.mc-val{
+  font-size:18px;font-family:var(--display);font-weight:700;
+  letter-spacing:-0.5px;line-height:1.1;
+}
+.mc-val.p{color:var(--purple);text-shadow:0 0 10px var(--purple-glow);}
+.mc-val.g{color:var(--green);text-shadow:0 0 10px var(--green-glow);}
+.mc-val.a{color:var(--amber);}
+.mc-val.r{color:var(--red);}
+.mc-sub{font-size:9px;color:var(--t3);margin-top:2px;}
+
+/* ── CHART ROWS ── */
+.row1,.row2{
+  display:grid;border-bottom:1px solid var(--b1);overflow:hidden;
+}
+.row1{grid-template-columns:1fr 1fr 1fr;}
+.row2{grid-template-columns:1fr 1fr;}
+.panel{
+  border-right:1px solid var(--b1);padding:10px 12px;
+  overflow:hidden;display:flex;flex-direction:column;
+}
+.panel:last-child{border:none;}
+.panel-hd{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:8px;
+}
+.panel-title{
+  font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--t3);
+}
+.badge{
+  font-size:8px;padding:2px 6px;border-radius:3px;
+  letter-spacing:.06em;font-weight:600;
+}
+.badge.p{background:var(--purple3);color:var(--purple);border:1px solid var(--purple2);}
+.badge.g{background:var(--green3);color:var(--green);}
+.badge.a{background:var(--amber3);color:var(--amber);}
+.cw{flex:1;position:relative;min-height:0;}
+canvas{display:block;width:100%!important;height:100%!important;}
+
+/* ── TABLE ── */
+.tbl-wrap{flex:1;overflow:auto;}
+table{width:100%;border-collapse:collapse;}
+th{
+  font-size:9px;color:var(--t3);padding:3px 6px;text-align:left;
+  border-bottom:1px solid var(--b1);
+  letter-spacing:.08em;text-transform:uppercase;font-weight:500;
+  background:var(--bg2);
+}
+td{padding:3px 6px;border-bottom:1px solid rgba(42,16,80,.4);font-size:10px;}
+tr:hover td{background:var(--bg3);}
+.fid{color:var(--purple);font-weight:600;}
+.err-g{color:var(--green);}
+.err-y{color:var(--amber);}
+.err-r{color:var(--red);}
+.lay-h{color:var(--purple);}
+.lay-l{color:var(--green);}
+
+/* ── EVENT LOG ── */
+.log{
+  flex:1;overflow-y:auto;display:flex;
+  flex-direction:column-reverse;gap:2px;
+  padding-right:2px;
+}
+.log::-webkit-scrollbar{width:3px;}
+.log::-webkit-scrollbar-track{background:var(--bg);}
+.log::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
+
+.le{
+  font-size:10px;padding:3px 7px;
+  border-left:2px solid var(--b2);
+  background:rgba(13,5,32,.7);color:var(--t2);
+  display:flex;gap:7px;
+  animation:fe .25s ease;
+  border-radius:0 3px 3px 0;
+}
+@keyframes fe{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:none;}}
+.le.ev{border-left-color:var(--amber);}
+.le.tk{border-left-color:var(--purple);}
+.le.ok{border-left-color:var(--green);}
+.lt{color:var(--t3);min-width:38px;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="logo">
+      ⚡ ELASTIC_SKETCH
+      <span class="logo-sub">// DAA Capstone 2026 · RVCE Bengaluru</span>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-stat">
+      <span>STATUS</span>
+      <span id="statusLbl">IDLE</span>
+    </div>
+    <div class="dot" id="dot"></div>
+    <div class="hdr-stat">
+      <span>PACKETS</span>
+      <span id="pktCount">0</span>
+    </div>
+  </div>
+</header>
+
+<div class="body">
+
+<!-- SIDEBAR -->
+<aside>
+
+  <div class="section">
+    <div class="section-title">Traffic Generator</div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">Zipf Alpha</span>
+        <span class="sl-val" id="vAlpha">1.5</span>
+      </div>
+      <input type="range" id="sAlpha" min="0.5" max="2.5" step="0.1" value="1.5">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">Unique flows</span>
+        <span class="sl-val" id="vFlows">10000</span>
+      </div>
+      <input type="range" id="sFlows" min="500" max="10000" step="500" value="10000">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">Batch size</span>
+        <span class="sl-val" id="vBatch">50K</span>
+      </div>
+      <input type="range" id="sBatch" min="5000" max="200000" step="5000" value="50000">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">Tick (ms)</span>
+        <span class="sl-val" id="vTick">200</span>
+      </div>
+      <input type="range" id="sTick" min="50" max="1000" step="50" value="200">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Sketch Config</div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">Heavy buckets</span>
+        <span class="sl-val" id="vHB">2048</span>
+      </div>
+      <input type="range" id="sHB" min="128" max="4096" step="128" value="2048">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">CMS columns</span>
+        <span class="sl-val" id="vCols">8192</span>
+      </div>
+      <input type="range" id="sCols" min="256" max="16384" step="256" value="8192">
+    </div>
+    <div class="sl-row">
+      <div class="sl-head">
+        <span class="sl-label">HH threshold</span>
+        <span class="sl-val" id="vHT">500</span>
+      </div>
+      <input type="range" id="sHT" min="50" max="2000" step="50" value="500">
+    </div>
+  </div>
+
+  <div class="section" style="display:flex;flex-direction:column;gap:6px;">
+    <button class="btn on" id="btnStart" onclick="toggle()">▶ Start</button>
+    <button class="btn rst" onclick="reset()">↺ Reset</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Memory</div>
+    <div class="stat-row"><span class="stat-k">Heavy part</span><span class="stat-v" id="mH">—</span></div>
+    <div class="stat-row"><span class="stat-k">CMS (4×cols)</span><span class="stat-v" id="mL">—</span></div>
+    <div class="stat-row"><span class="stat-k">Total sketch</span><span class="stat-v" id="mT">—</span></div>
+    <div class="stat-row"><span class="stat-k">vs HashMap</span><span class="stat-v" id="mR">—</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">YOUR Results</div>
+    <div class="stat-row"><span class="stat-k">Throughput</span><span class="stat-v">236M pps</span></div>
+    <div class="stat-row"><span class="stat-k">Precision</span><span class="stat-v" style="color:var(--purple)">100%</span></div>
+    <div class="stat-row"><span class="stat-k">Recall</span><span class="stat-v" style="color:var(--purple)">98.8%</span></div>
+    <div class="stat-row"><span class="stat-k">Memory</span><span class="stat-v">~152 KB</span></div>
+  </div>
+
+</aside>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- METRIC STRIP -->
+  <div class="metrics">
+    <div class="mc p">
+      <div class="mc-lbl">Throughput</div>
+      <div class="mc-val p" id="mTput">—</div>
+      <div class="mc-sub">sim Mpps</div>
+    </div>
+    <div class="mc g">
+      <div class="mc-lbl">Precision</div>
+      <div class="mc-val g" id="mPrec">—</div>
+      <div class="mc-sub">heavy hitter acc.</div>
+    </div>
+    <div class="mc a">
+      <div class="mc-lbl">Light MRE</div>
+      <div class="mc-val a" id="mMRE">—</div>
+      <div class="mc-sub">mean rel. error</div>
+    </div>
+    <div class="mc r">
+      <div class="mc-lbl">Evictions</div>
+      <div class="mc-val r" id="mEvic">0</div>
+      <div class="mc-sub">vote-and-demote</div>
+    </div>
+    <div class="mc p">
+      <div class="mc-lbl">Occupancy</div>
+      <div class="mc-val p" id="mOcc">—</div>
+      <div class="mc-sub">heavy buckets</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: throughput | heavy hitters | zipf dist -->
+  <div class="row1">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Live Throughput</span>
+        <span class="badge p">LIVE</span>
+      </div>
+      <div class="cw"><canvas id="cT"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Top 10 — Truth vs Estimate</span>
+        <span class="badge g">CMP</span>
+      </div>
+      <div class="cw"><canvas id="cH"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Zipf Distribution</span>
+        <span class="badge a">DIST</span>
+      </div>
+      <div class="cw"><canvas id="cD"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: accuracy table | event log -->
+  <div class="row2">
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">Flow Accuracy Table</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Flow</th>
+              <th>True</th>
+              <th>Est.</th>
+              <th>Err%</th>
+              <th>Layer</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody id="tBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Event Log</span>
+        <span class="badge a">LIVE</span>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+</div><!-- .content -->
+</div><!-- .body -->
+
+<script>
+// ────────────────────────────────────────────────────────────────────────────
+// ELASTIC SKETCH — JavaScript simulation
+// Mirrors YOUR project's algorithm:
+//   - Heavy Guardian with Vote-and-Demote (hg_insert logic)
+//   - Count-Min Sketch with 4 rows × CMS_COLS (cms_update / cms_query)
+//   - MurmurHash3 (32-bit) — same as YOUR foundation
+//   - Zipfian traffic with binary-search CDF — same as YOUR traffic_gen.c
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── MurmurHash3 (matches YOUR foundation.c) ──────────────────────────────────
+function mmh3(key, seed) {
+  let h = seed >>> 0, k = key >>> 0;
+  k = Math.imul(k, 0xcc9e2d51) >>> 0;
+  k = ((k << 15) | (k >>> 17)) >>> 0;
+  k = Math.imul(k, 0x1b873593) >>> 0;
+  h ^= k;
+  h = ((h << 13) | (h >>> 19)) >>> 0;
+  h = (Math.imul(h, 5) + 0xe6546b64) >>> 0;
+  h ^= 4;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+// ── YOUR hash_flow equivalent (heavy_guardian.c uses a different hash) ────────
+// We use mmh3 for consistency with your foundation.c
+function hashFlow(flowId, numBuckets) {
+  return mmh3(flowId, 0x9747b28c) % numBuckets;
+}
+
+// ── CMS seeds (match YOUR count_min_sketch.c SEEDS array) ────────────────────
+const CMS_SEEDS = [0x9747b28c, 0x85ebca6b, 0xc2b2ae35, 0x27d4eb2f];
+const CMS_ROWS  = 4;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let heavy = [], light = [], gt = new Map();
+let HB = 2048, COLS = 8192, HH_THRESHOLD = 500;
+let totalPkts = 0, totalEvic = 0, tick = 0;
+let running = false, timer = null;
+
+const tputHist = [], precHist = [], mreHist = [];
+const MAX_HIST = 60;
+
+function initSketch() {
+  HB         = +document.getElementById('sHB').value;
+  COLS       = +document.getElementById('sCols').value;
+  HH_THRESHOLD = +document.getElementById('sHT').value;
+
+  // Heavy Guardian: {fid, count, reward}
+  heavy = Array.from({ length: HB }, () => ({ fid: 0, count: 0, reward: 0 }));
+
+  // Count-Min Sketch: CMS_ROWS × COLS
+  light = Array.from({ length: CMS_ROWS }, () => new Int32Array(COLS));
+
+  gt.clear();
+  totalPkts = 0; totalEvic = 0; tick = 0;
+  tputHist.length = 0; precHist.length = 0; mreHist.length = 0;
+  updateMem();
+}
+
+// ── CMS helpers ───────────────────────────────────────────────────────────────
+function cmsUpdate(fid, count) {
+  for (let r = 0; r < CMS_ROWS; r++) {
+    const col = mmh3(fid, CMS_SEEDS[r]) % COLS;
+    light[r][col] += count;
+  }
+}
+function cmsQuery(fid) {
+  let mn = Infinity;
+  for (let r = 0; r < CMS_ROWS; r++) {
+    const v = light[r][mmh3(fid, CMS_SEEDS[r]) % COLS];
+    if (v < mn) mn = v;
+  }
+  return mn === Infinity ? 0 : mn;
+}
+
+// ── Heavy Guardian insert (mirrors YOUR hg_insert) ────────────────────────────
+function hgInsert(fid) {
+  const idx = hashFlow(fid, HB);
+  const b   = heavy[idx];
+
+  // Case 1: empty
+  if (b.count === 0) {
+    b.fid = fid; b.count = 1; b.reward = 1;
+    return;
+  }
+  // Case 2: same flow
+  if (b.fid === fid) {
+    b.count++;
+    b.reward++;
+    return;
+  }
+  // Case 3: Vote-and-Demote
+  if (b.reward > 0) b.reward--;
+  if (b.reward === 0) {
+    // Evict incumbent to CMS with full count
+    cmsUpdate(b.fid, b.count);
+    totalEvic++;
+    if (totalEvic % 200 === 0)
+      addLog('ev', `Flow ${b.fid} → CMS (cnt:${b.count})`);
+    b.fid = fid; b.count = 1; b.reward = 1;
+  }
+}
+
+// ── Combined query (mirrors YOUR es_query) ────────────────────────────────────
+function queryFlow(fid) {
+  const idx = hashFlow(fid, HB);
+  if (heavy[idx].fid === fid && heavy[idx].count > 0)
+    return { v: heavy[idx].count, layer: 'heavy' };
+  return { v: cmsQuery(fid), layer: 'light' };
+}
+
+// ── Zipf generator (CDF binary search, matches YOUR traffic_gen.c) ───────────
+let zipfCDF = null, zipfN = 0;
+
+function buildZipfCDF(alpha, n) {
+  zipfN = n;
+  zipfCDF = new Float64Array(n + 1);
+  let norm = 0;
+  for (let i = 1; i <= n; i++) norm += 1 / Math.pow(i, alpha);
+  let running = 0;
+  for (let i = 1; i <= n; i++) {
+    running   += (1 / Math.pow(i, alpha)) / norm;
+    zipfCDF[i] = running;
+  }
+}
+
+function zipfSample() {
+  const z = Math.random();
+  let lo = 1, hi = zipfN;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (zipfCDF[mid] < z) lo = mid + 1;
+    else                  hi = mid;
+  }
+  return lo;
+}
+
+// ── Process one batch ─────────────────────────────────────────────────────────
+function processBatch() {
+  const NFLOWS = +document.getElementById('sFlows').value;
+  const bsz    = +document.getElementById('sBatch').value;
+  const alpha  = +document.getElementById('sAlpha').value;
+
+  buildZipfCDF(alpha, NFLOWS);
+
+  const t0 = performance.now();
+  for (let i = 0; i < bsz; i++) {
+    const fid = zipfSample();
+    gt.set(fid, (gt.get(fid) || 0) + 1);
+    hgInsert(fid);
+  }
+  const elapsed = (performance.now() - t0) / 1000;
+  totalPkts += bsz; tick++;
+  return bsz / elapsed;
+}
+
+// ── Compute + render metrics ──────────────────────────────────────────────────
+function computeMetrics(tput) {
+  // Precision
+  let trueHH = 0, foundHH = 0;
+  const heavySet = new Set();
+  for (const [fid, tc] of gt) if (tc >= HH_THRESHOLD) trueHH++;
+  for (let i = 0; i < HB; i++) {
+    const b = heavy[i];
+    if (b.count > 0 && !heavySet.has(b.fid)) {
+      heavySet.add(b.fid);
+      if ((gt.get(b.fid) || 0) >= HH_THRESHOLD) foundHH++;
+    }
+  }
+  const prec = trueHH > 0 ? Math.min(foundHH / trueHH * 100, 100) : 100;
+
+  // MRE (light-part flows only, meaningful traffic)
+  let mreSum = 0, mreCnt = 0;
+  for (const [fid, tc] of gt) {
+    if (tc >= 10 && !heavySet.has(fid)) {
+      const est = cmsQuery(fid);
+      mreSum += Math.abs(est - tc) / tc;
+      mreCnt++;
+    }
+  }
+  const mre = mreCnt > 0 ? mreSum / mreCnt * 100 : 0;
+
+  const occ = heavy.filter(b => b.count > 0).length;
+  const tputM = tput / 1e6;
+
+  document.getElementById('mTput').textContent = tputM.toFixed(2) + 'M';
+  document.getElementById('mPrec').textContent = prec.toFixed(1) + '%';
+  document.getElementById('mMRE').textContent  = mre.toFixed(1) + '%';
+  document.getElementById('mEvic').textContent = totalEvic.toLocaleString();
+  document.getElementById('mOcc').textContent  = occ + '/' + HB;
+  document.getElementById('pktCount').textContent = totalPkts.toLocaleString();
+
+  tputHist.push(+tputM.toFixed(3)); if (tputHist.length > MAX_HIST) tputHist.shift();
+  precHist.push(+prec.toFixed(2));  if (precHist.length > MAX_HIST) precHist.shift();
+  mreHist.push( +mre.toFixed(2));   if (mreHist.length  > MAX_HIST) mreHist.shift();
+
+  if (tick % 3 === 0)
+    addLog('tk', `Tick ${tick}: ${tputM.toFixed(2)}Mpps prec=${prec.toFixed(1)}% evic=${totalEvic}`);
+
+  updateTable(heavySet);
+}
+
+function updateMem() {
+  HB   = +document.getElementById('sHB').value;
+  COLS = +document.getElementById('sCols').value;
+  // YOUR sizes: HeavyBucket = {uint32 + uint32 + uint32} = 12 bytes
+  const hm  = (HB * 12) / 1024;
+  const lm  = (CMS_ROWS * COLS * 4) / 1024;
+  const tot = hm + lm;
+  const ratio = gt.size > 0 ? Math.round(gt.size * 12 / 1024 / tot) : 0;
+  document.getElementById('mH').textContent = hm.toFixed(1)  + ' KB';
+  document.getElementById('mL').textContent = lm.toFixed(1)  + ' KB';
+  document.getElementById('mT').textContent = tot.toFixed(1) + ' KB';
+  document.getElementById('mR').textContent = ratio > 0 ? ratio + '× smaller' : '—';
+}
+
+function updateTable(heavySet) {
+  const rows = [...gt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+  const mx   = rows.length ? rows[0][1] : 1;
+  document.getElementById('tBody').innerHTML = rows.map(([fid, tc]) => {
+    const q   = queryFlow(fid);
+    const re  = tc > 0 ? Math.abs(q.v - tc) / tc * 100 : 0;
+    const ec  = re < 5 ? 'err-g' : re < 20 ? 'err-y' : 'err-r';
+    const bar = Math.round(tc / mx * 50);
+    const hh  = (tc >= HH_THRESHOLD)
+      ? '<span style="color:var(--amber)">★</span>' : '';
+    const lc  = q.layer === 'heavy' ? 'lay-h' : 'lay-l';
+    return `<tr>
+      <td class="fid">${fid}${hh}</td>
+      <td>${tc.toLocaleString()}</td>
+      <td>${q.v.toLocaleString()}</td>
+      <td class="${ec}">${re.toFixed(1)}%</td>
+      <td class="${lc}">${q.layer}</td>
+      <td><span style="display:inline-block;width:${bar}px;height:3px;
+        background:var(--purple);border-radius:1px;vertical-align:middle;
+        opacity:.8"></span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Chart setup ───────────────────────────────────────────────────────────────
+const BASE_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 0 },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: {
+      ticks: { color: '#5b3a8a', font: { family: 'JetBrains Mono', size: 8 } },
+      grid:  { color: '#1a0d3a' },
+    },
+    y: {
+      ticks: { color: '#5b3a8a', font: { family: 'JetBrains Mono', size: 8 } },
+      grid:  { color: '#1a0d3a' },
+    },
+  },
+};
+
+let cT, cH, cD;
+
+function initCharts() {
+  if (cT) { cT.destroy(); cH.destroy(); cD.destroy(); }
+
+  cT = new Chart(document.getElementById('cT'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#a855f7',
+        backgroundColor: 'rgba(168,85,247,0.06)',
+        borderWidth: 1.5, pointRadius: 0, fill: true, tension: .3,
+      }],
+    },
+    options: { ...BASE_OPTS,
+      scales: { ...BASE_OPTS.scales, y: { ...BASE_OPTS.scales.y, min: 0 } } },
+  });
+
+  cH = new Chart(document.getElementById('cH'), {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Truth',    data: [], backgroundColor: 'rgba(168,85,247,0.75)' },
+        { label: 'Estimate', data: [], backgroundColor: 'rgba(34,197,94,0.65)'  },
+      ],
+    },
+    options: { ...BASE_OPTS, plugins: {
+      legend: {
+        display: true,
+        labels: {
+          color: '#9f7aea',
+          font: { size: 9, family: 'JetBrains Mono' },
+          boxWidth: 9,
+        },
+      },
+    }},
+  });
+
+  cD = new Chart(document.getElementById('cD'), {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{ data: [], backgroundColor: 'rgba(34,197,94,0.7)' }],
+    },
+    options: BASE_OPTS,
+  });
+}
+
+function updateCharts() {
+  cT.data.labels = tputHist.map((_, i) => i);
+  cT.data.datasets[0].data = [...tputHist];
+  cT.update('none');
+
+  const top10 = [...gt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  cH.data.labels = top10.map(e => `F${e[0]}`);
+  cH.data.datasets[0].data = top10.map(e => e[1]);
+  cH.data.datasets[1].data = top10.map(e => queryFlow(e[0]).v);
+  cH.update('none');
+
+  const top30 = [...gt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30);
+  cD.data.labels = top30.map(e => `${e[0]}`);
+  cD.data.datasets[0].data = top30.map(e => e[1]);
+  cD.update('none');
+}
+
+// ── Event log ─────────────────────────────────────────────────────────────────
+const logEntries = [];
+function addLog(type, msg) {
+  const now = new Date();
+  const t   = `${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  logEntries.unshift({ type, msg, t });
+  if (logEntries.length > 80) logEntries.pop();
+  document.getElementById('log').innerHTML =
+    logEntries.slice(0, 40)
+      .map(e => `<div class="le ${e.type}"><span class="lt">${e.t}</span><span>${e.msg}</span></div>`)
+      .join('');
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function toggle() {
+  if (running) {
+    running = false;
+    clearInterval(timer);
+    document.getElementById('btnStart').textContent = '▶ Start';
+    document.getElementById('btnStart').classList.remove('on');
+    document.getElementById('dot').className = 'dot';
+    document.getElementById('statusLbl').textContent = 'PAUSED';
+    addLog('tk', 'Simulation paused.');
+  } else {
+    running = true;
+    document.getElementById('btnStart').textContent = '⏸ Pause';
+    document.getElementById('btnStart').classList.add('on');
+    document.getElementById('dot').className = 'dot live';
+    document.getElementById('statusLbl').textContent = 'LIVE';
+    addLog('ok', 'Simulation started.');
+    const ms = +document.getElementById('sTick').value;
+    timer = setInterval(() => {
+      const tp = processBatch();
+      computeMetrics(tp);
+      updateCharts();
+      updateMem();
+    }, ms);
+  }
+}
+
+function reset() {
+  running = false;
+  clearInterval(timer);
+  document.getElementById('btnStart').textContent = '▶ Start';
+  document.getElementById('btnStart').className   = 'btn on';
+  document.getElementById('dot').className = 'dot';
+  document.getElementById('statusLbl').textContent = 'IDLE';
+  initSketch(); initCharts();
+  document.getElementById('tBody').innerHTML = '';
+  document.getElementById('log').innerHTML   = '';
+  ['mTput','mPrec','mMRE','mOcc'].forEach(id =>
+    document.getElementById(id).textContent = '—');
+  document.getElementById('mEvic').textContent   = '0';
+  document.getElementById('pktCount').textContent = '0';
+  addLog('ok', 'Reset. Configure and press ▶ to start.');
+}
+
+// ── Slider bindings ───────────────────────────────────────────────────────────
+[
+  ['sAlpha', 'vAlpha', v => v],
+  ['sFlows', 'vFlows', v => v],
+  ['sBatch', 'vBatch', v => Math.round(v / 1000) + 'K'],
+  ['sTick',  'vTick',  v => v],
+  ['sHB',    'vHB',    v => v],
+  ['sCols',  'vCols',  v => v],
+  ['sHT',    'vHT',    v => v],
+].forEach(([sid, vid, fmt]) => {
+  document.getElementById(sid).addEventListener('input', e =>
+    document.getElementById(vid).textContent = fmt(e.target.value));
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initSketch();
+  initCharts();
+  addLog('ok', 'Dashboard ready. YOUR defaults: 2048 buckets, 4×8192 CMS.');
+  addLog('ok', 'Reference results: 236M pps, 100% precision, 98.8% recall.');
+});
+window.addEventListener('resize', () => {
+  if (cT) cT.resize();
+  if (cH) cH.resize();
+  if (cD) cD.resize();
+});
+</script>
+</body>
+</html>
