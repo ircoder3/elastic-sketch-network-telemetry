@@ -1,5 +1,24 @@
+# Compiled C binaries and objects
 *.exe
 *.o
 *.out
+*.dll
+*.so
+*.dylib
 benchmark
 elastic_sketch
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS specific files
+.DS_Store
+Thumbs.db
