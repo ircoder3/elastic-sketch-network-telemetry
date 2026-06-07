@@ -1,6 +1,3 @@
-You got it! Let’s break it out completely so every single file has its own individual line and explicit description, rather than combining them.
-
-Here is your full, final `README.md` that you can copy and paste directly into your VS Code:
 
 ```markdown
 # Elastic Sketch — Network Telemetry Engine
