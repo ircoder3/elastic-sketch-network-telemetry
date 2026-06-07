@@ -1,6 +1,11 @@
+You got it! Let’s break it out completely so every single file has its own individual line and explicit description, rather than combining them.
+
+Here is your full, final `README.md` that you can copy and paste directly into your VS Code:
+
+```markdown
 # Elastic Sketch — Network Telemetry Engine
 
-A memory-efficient network flow monitoring system built in Pure C.
+A memory-efficient network flow monitoring system built in Pure C, featuring a real-time visual telemetry dashboard powered by Python and Streamlit.
 
 Designed to identify heavy network flows with high accuracy while using only **~152 KB of memory**.
 
@@ -8,12 +13,48 @@ Designed to identify heavy network flows with high accuracy while using only **~
 
 ## 🚀 Features
 
-- Detects heavy-hitter network flows with near-exact accuracy
-- Fixed memory footprint (~152 KB)
-- Processes up to **236M packets/sec**
-- Combines **Heavy Guardian** and **Count-Min Sketch**
-- Simulates realistic traffic using **Zipfian distributions**
-- Pure C implementation with no external dependencies
+* **Real-Time Telemetry Dashboard** built with Streamlit and Plotly using Python `ctypes` to communicate with the C backend.
+* **Near-Exact Heavy Hitter Detection** with high precision.
+* **Fixed Memory Footprint** of approximately 152 KB regardless of traffic volume.
+* **High Throughput** of up to 236M packets/sec.
+* **Dual-Layer Architecture** combining Heavy Guardian and Count-Min Sketch.
+* **Realistic Zipfian Traffic Simulation.**
+* **Pure C Implementation** with no external C dependencies.
+
+---
+
+## 📊 Benchmark Results
+
+Performance measured using **1,000,000 synthetic packets** generated from a Zipfian distribution.
+
+```text
+====================================
+ ELASTIC SKETCH - NETWORK TELEMETRY
+====================================
+
+Total Packets Processed : 1,000,000
+Time Elapsed            : 0.004 sec
+Throughput              : ~150,854,591 pkt/s
+
+Precision               : 100.0%
+Recall                  : 98.8%
+
+Mean Relative Error     : 22.15%
+
+Heavy flows  (>500)     : 1.21%
+Mid flows    (>50)      : 11.84%
+Light flows  (<=50)     : 27.42%
+
+Memory Footprint
+
+Heavy Guardian          : 2048 buckets (~24 KB)
+Count-Min Sketch        : 4 × 8192 (~128 KB)
+
+Total                   : ~152 KB
+
+====================================
+
+```
 
 ---
 
@@ -21,81 +62,47 @@ Designed to identify heavy network flows with high accuracy while using only **~
 
 Modern networks generate traffic faster than traditional systems can monitor efficiently.
 
-- **Hash Map (Exact Tracking)** → Accurate, but memory usage grows with the number of network flows.
-
-- **Count-Min Sketch (Approximate Tracking)** → Uses fixed memory, but introduces estimation errors due to hash collisions.
-
-- **Elastic Sketch (This Project)** → Maintains only **~152 KB memory**, achieves **~99% accuracy**, and processes **236M packets/sec**.
+* **Hash Maps** provide exact tracking but require memory proportional to the number of flows.
+* **Count-Min Sketch** uses fixed memory but introduces estimation errors due to hash collisions.
+* **Elastic Sketch (This Project)** combines both ideas to achieve ~99% accuracy, 236M packets/sec throughput, and a fixed ~152 KB memory footprint.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Language** — Pure C (no external libraries)
-- **Hashing** — MurmurHash3
-- **Traffic Simulation** — Zipfian Distribution (α = 1.5)
-- **Compiler** — GCC (O2 Optimisation)
-- **Timing** — POSIX `clock_gettime()`
+* **Core Engine** — C99
+* **Frontend Dashboard** — Python, Streamlit, Plotly
+* **Backend Binding** — Python `ctypes`
+* **Hashing** — MurmurHash3
+* **Traffic Generator** — Zipfian Distribution (α = 1.5)
 
 ---
 
 ## 🏗️ Architecture
 
-Two layers work together in a single pipeline:
+The system combines two complementary data structures into a single pipeline.
 
 ### Layer 1 — Heavy Guardian
 
-Every packet is hashed into a bucket where one of three actions occurs:
+Every packet is hashed into a bucket where:
 
-- Same flow → increment its counter
-- Different flow → decrease the reward value
-- Reward reaches zero → evict the weaker flow and install the new one
+* **Same flow** → Increment counter
+* **Different flow** → Decrease reward value
+* **Reward reaches zero** → Replace the weaker flow
 
-This mechanism is called **Vote-and-Demote**. Frequently occurring flows continue receiving votes and stay in memory, while less important flows are gradually removed.
+This **Vote-and-Demote** strategy ensures frequently occurring flows remain in memory while weaker flows are gradually removed.
 
 ### Layer 2 — Count-Min Sketch
 
-Flows removed from Heavy Guardian are forwarded to the Count-Min Sketch.
+Flows evicted from Heavy Guardian are forwarded to the Count-Min Sketch.
 
-- Flow is hashed into 4 counter arrays
-- Corresponding counters are incremented
-- Queries return the minimum counter value
+* Hash into four counter arrays
+* Increment corresponding counters
+* Estimate frequency using the minimum counter
 
-Using the minimum counter helps reduce overestimation caused by hash collisions.
+This provides efficient estimation while maintaining a fixed memory budget.
 
-**Result:** Important flows receive near-exact tracking while less significant flows are estimated efficiently within a fixed memory budget.
-
----
-
-## 📊 Benchmark Results
-
-Performance measured using **1,000,000 synthetic packets** generated from a Zipfian traffic distribution.
-
-```text
-====================================
- ELASTIC SKETCH - NETWORK TELEMETRY
-====================================
-Total Packets Processed : 1,000,000
-Time Elapsed            : 0.004 sec
-Throughput              : ~236,568,806 pkt/s
-
-Precision               : 100.0%
-Recall                  : 98.8%
-
-Mean Relative Error     : 22.15%  [ flows seen >= 10 packets ]
-
-  Heavy flows  (> 500)  :  1.21%
-  Mid flows    (>  50)  : 11.84%
-  Light flows  (<= 50)  : 27.42%
-
-Memory Footprint:
-
-  Heavy Guardian        : 2048 buckets  (~24 KB)
-  Count-Min Sketch      : 4 × 8192      (~128 KB)
-
-  Total                 : ~152 KB
-====================================
-```
+**Result:** Heavy flows are tracked with near-exact accuracy while light flows are estimated efficiently using constant memory.
 
 ---
 
@@ -103,75 +110,111 @@ Memory Footprint:
 
 ```text
 elastic-sketch-network-telemetry/
-├── src/
-│   ├── heavy_guardian.c
-│   ├── heavy_guardian.h
-│   ├── count_min_sketch.c
-│   ├── count_min_sketch.h
-│   ├── elastic_sketch.c
-│   ├── elastic_sketch.h
-│   ├── traffic_gen.c
-│   ├── traffic_gen.h
-│   └── main.c
-├── tests/
-│   └── benchmark.c
-├── Makefile
-└── README.md
+│
+├── src/                            <-- Core C engine source code folder
+│   ├── heavy_guardian.c            <-- Layer 1: Implements exact tracking & vote-and-demote algorithm logic
+│   ├── heavy_guardian.h            <-- Layer 1: Configures bucket structures and tracking definitions
+│   ├── count_min_sketch.c          <-- Layer 2: Implements low-overhead sketching for evicted flows
+│   ├── count_min_sketch.h          <-- Layer 2: Configures the 2D counter arrays and depth parameters
+│   ├── elastic_sketch.c            <-- Pipeline Coordinator: Fuses Heavy Guardian and Count-Min Sketch layers
+│   ├── elastic_sketch.h            <-- Pipeline Coordinator: Main structure definitions for overall sketch metrics
+│   ├── traffic_gen.c               <-- Traffic Simulator: Mathematically models skewed real-world IP flows
+│   ├── traffic_gen.h               <-- Traffic Simulator: Configurations for alpha values and packet streams
+│   └── main.c                      <-- C Entry Point: Standard console runner for pure C execution benchmarks
+│
+├── tests/                          <-- Testing suite directory
+│   └── benchmark.c                 <-- Runs comparative metrics across multiple bucket and distribution setups
+│
+├── app.py                          <-- Real-time visual dashboard powered by Streamlit, Plotly, and ctypes
+├── build.bat                       <-- Automated script to compile C files into local executables and a shared DLL
+├── requirements.txt                <-- Python external runtime environment dependency definitions
+└── README.md                       <-- Project documentation manual
+
 ```
 
 ---
 
-## 📦 Installation
+## 📦 Installation & Usage
 
 ### Prerequisites
 
-- GCC Compiler
-- MinGW-w64 (Windows)
+* GCC Compiler / MinGW-w64 (Windows)
+* Python 3.8+
 
-### Clone Repository
+---
+
+### 1. Clone Repository
 
 ```bash
 git clone https://github.com/ircoder3/elastic-sketch-network-telemetry.git
 cd elastic-sketch-network-telemetry
 ```
 
-### 1️⃣ Main Program
+---
+
+### 2. Install Python Dependencies
 
 ```bash
-gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
-
-.\elastic_sketch.exe
+pip install -r requirements.txt
 ```
 
-### 2️⃣ Benchmark Suite
+---
 
-```bash
-gcc -Wall -O2 -std=c99 -o benchmark.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c tests/benchmark.c -lm
-
-.\benchmark.exe
-```
-
-### Windows (PowerShell)
+### 3. Build the Project
 
 ```powershell
-gcc -Wall -O2 -std=c99 -o elastic_sketch.exe src/heavy_guardian.c src/count_min_sketch.c src/elastic_sketch.c src/traffic_gen.c src/main.c -lm
+.\build.bat
+```
 
+---
+
+# ▶️ Run the Project
+
+## Dashboard Visualization
+
+Launch the real-time telemetry dashboard.
+
+```powershell
+streamlit run app.py
+```
+
+---
+
+## Pure C Simulation
+
+Run the complete Elastic Sketch simulation and view accuracy, throughput, and memory statistics.
+
+```powershell
 .\elastic_sketch.exe
 ```
 
 ---
 
+## Benchmark Suite
+
+Run benchmark tests across different bucket configurations and Zipfian traffic distributions.
+
+```powershell
+.\benchmark.exe
+```
+---
+
 ## 🧠 Key Concepts
 
-- **Heavy Guardian** — Keeps track of the most active network flows with high accuracy.
-- **Count-Min Sketch** — Estimates frequencies using fixed memory.
-- **Vote-and-Demote** — Important flows stay in memory while weaker flows are gradually replaced.
-- **Zipfian Traffic** — Models real-world traffic where a small number of flows dominate.
-- **O(1) Processing** — Every packet updates a fixed number of counters regardless of traffic volume.
-## 🚧 Pending Enhancement
+* **Heavy Guardian** — Maintains exact counts for dominant flows.
+* **Count-Min Sketch** — Estimates frequencies using fixed memory.
+* **Vote-and-Demote** — Retains important flows while replacing weaker ones.
+* **Zipfian Traffic** — Simulates realistic network traffic distributions.
+* **O(1) Processing** — Each packet updates a fixed number of counters, enabling high-speed processing.
 
-- **Python Analytics Pipeline** — Export benchmark metrics to JSON/CSV and generate automated visualizations for throughput, memory usage, precision, recall, and heavy-hitter analysis.
+---
 
 ## 🔮 Future Work
 
-- **Live Traffic Monitoring** — Integrate packet capture (libpcap) to process real network traffic, transforming Elastic Sketch into a practical network telemetry and heavy-flow detection system.
+* Integrate live packet capture for real network monitoring.
+* Add AI-based anomaly detection for intelligent threat analysis.
+* Support distributed deployment for large-scale telemetry systems.
+
+```
+
+```
