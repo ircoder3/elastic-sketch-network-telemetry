@@ -1,5 +1,3 @@
-
-```markdown
 # Elastic Sketch — Network Telemetry Engine
 
 A memory-efficient network flow monitoring system built in Pure C, featuring a real-time visual telemetry dashboard powered by Python and Streamlit.
@@ -38,9 +36,9 @@ Recall                  : 98.8%
 
 Mean Relative Error     : 22.15%
 
-Heavy flows  (>500)     : 1.21%
-Mid flows    (>50)      : 11.84%
-Light flows  (<=50)     : 27.42%
+Heavy Flows  (>500)     : 1.21%
+Mid Flows    (>50)      : 11.84%
+Light Flows  (<=50)     : 27.42%
 
 Memory Footprint
 
@@ -50,7 +48,6 @@ Count-Min Sketch        : 4 × 8192 (~128 KB)
 Total                   : ~152 KB
 
 ====================================
-
 ```
 
 ---
@@ -130,6 +127,7 @@ elastic-sketch-network-telemetry/
 ```
 
 ---
+---
 
 ## 📦 Installation & Usage
 
@@ -144,6 +142,7 @@ elastic-sketch-network-telemetry/
 
 ```bash
 git clone https://github.com/ircoder3/elastic-sketch-network-telemetry.git
+
 cd elastic-sketch-network-telemetry
 ```
 
@@ -194,6 +193,7 @@ Run benchmark tests across different bucket configurations and Zipfian traffic d
 ```powershell
 .\benchmark.exe
 ```
+
 ---
 
 ## 🧠 Key Concepts
@@ -211,7 +211,3 @@ Run benchmark tests across different bucket configurations and Zipfian traffic d
 * Integrate live packet capture for real network monitoring.
 * Add AI-based anomaly detection for intelligent threat analysis.
 * Support distributed deployment for large-scale telemetry systems.
-
-```
-
-```
