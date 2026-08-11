@@ -5,7 +5,6 @@ Designed to identify heavy network flows with high accuracy while using only **~
 
 Elastic Sketch combines **Heavy Guardian** (catches likely heavy flows precisely) and **Count-Min Sketch** (estimates the rest with shared counters) to detect heavy network flows using constant memory.
 
-**[Live demo →](YOUR_DEPLOYED_LINK_HERE)**
 
 ## Metrics
 
@@ -25,4 +24,3 @@ streamlit run app.py
 ```
 
 ---
-*Experiential Learning — Design and Analysis of Algorithms, 2026*
