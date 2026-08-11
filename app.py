@@ -7,24 +7,58 @@ import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# ── load DLL ──────────────────────────────────────────────
+# ── load / build shared library ─────────────────────────────
+import glob
+import subprocess
+import sys
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 DLL  = os.path.join(BASE, "elastic_sketch.dll")
 SO   = os.path.join(BASE, "elastic_sketch.so")
-PATH = DLL if os.path.exists(DLL) else SO
 
-import os
+def build_shared_lib():
+    """Compile the C sources into elastic_sketch.so if it doesn't exist yet
+    (e.g. on a fresh Streamlit Cloud checkout, where nothing has run the
+    Makefile). main.c is excluded since it defines its own main() and would
+    clash when building a shared library."""
+    sources = [os.path.join(BASE, "elastic_sketch_api.c")]
+    src_dir = os.path.join(BASE, "src")
+    if os.path.isdir(src_dir):
+        sources += [
+            f for f in glob.glob(os.path.join(src_dir, "*.c"))
+            if os.path.basename(f) != "main.c"
+        ]
+    sources = [s for s in sources if os.path.exists(s)]
+
+    if not sources:
+        return False, "No C source files found to build."
+
+    cmd = ["gcc", "-shared", "-fPIC", "-O2", "-o", SO] + sources
+    if src_dir and os.path.isdir(src_dir):
+        cmd += ["-I", src_dir]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        return False, result.stderr
+    return True, None
+
+# On Windows dev machines, prefer the prebuilt .dll if present.
+if os.path.exists(DLL) and os.name == "nt":
+    PATH = DLL
+else:
+    if not os.path.exists(SO):
+        ok, err = build_shared_lib()
+        if not ok:
+            st.error(f"Failed to build elastic_sketch.so:\n\n{err}")
+            st.stop()
+    PATH = SO
 
 try:
-    # 1. Explicitly tell Windows this directory is safe for DLLs
-    if hasattr(os, 'add_dll_directory'):
-        os.add_dll_directory(os.path.dirname(os.path.abspath(__file__)))
-    
-    # 2. Load the DLL using winmode=0 to allow dependency loading
-    lib = ctypes.CDLL(PATH, winmode=0)
-
+    if os.name == "nt" and hasattr(os, "add_dll_directory"):
+        os.add_dll_directory(BASE)
+    lib = ctypes.CDLL(PATH)
 except OSError as e:
-    st.error(f"DLL Load Error: {e}")
+    st.error(f"Library load error: {e}")
     st.stop()
 
 class TelData(ctypes.Structure):
