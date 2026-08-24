@@ -1,1 +1,10 @@
 *.html linguist-vendored
+*.css linguist-vendored
+*.js linguist-vendored
+dashboard/** linguist-vendored
+
+tests/benchmark.c linguist-vendored
+src/foundation.c linguist-vendored
+src/traffic_gen.c linguist-vendored
+src/traffic_gen.h linguist-vendored
+elastic_sketch_api.c linguist-vendored
